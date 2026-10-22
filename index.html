@@ -4,16 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Import your Claude, ChatGPT and Gemini chat exports to count tokens and estimate the data-center water behind them.">
-<title>AI Water Ledger</title>
+<title>DripStat</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#111113">
+<meta property="og:title" content="DripStat">
+<meta property="og:description" content="How much water did your AI chats use? Import your Claude, ChatGPT and Gemini exports to find out.">
+<meta property="og:image" content="https://awnsh.github.io/dripstat/brand/dripstat-social.png">
+<meta property="og:url" content="https://awnsh.github.io/dripstat/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 [hidden] { display: none !important; }
 html, body { margin: 0; }
 img { max-width: 100%; }
-/* Layout: one column ledger — tank + total up top, three account cards, daily chart, method, manual log. */
+/* Layout: one column — tank + total up top, three account cards, daily chart, method, manual log. */
 :root {
   --bg: #eef4f5;
   --surface: #ffffff;
@@ -23,6 +32,7 @@ img { max-width: 100%; }
   --line: #d3e1e4;
   --accent: #0b6e7f;
   --accent-soft: #d9edf1;
+  --drop: #1e90ff;
   --warn-bg: #fff4dc;
   --warn-ink: #6b4a00;
   --s-gemini: #2a78d6;
@@ -53,6 +63,8 @@ body {
 .wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 28px; }
 h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
 h1 { font-size: clamp(28px, 4.4vw, 40px); font-weight: 700; letter-spacing: -0.01em; }
+h1.brand { font-family: "Unbounded", var(--f-display); font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: flex-end; gap: 0.3em; line-height: 1; }
+h1.brand .mark { height: 1.3em; width: auto; flex: none; }
 h2 { font-size: 22px; font-weight: 700; }
 h3 { font-size: 17px; font-weight: 500; }
 p { margin: 0; }
@@ -169,9 +181,9 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
 <div class="wrap">
   <header class="top">
     <div style="display:grid;gap:6px">
-      <span class="label">Personal AI footprint</span>
-      <h1>AI Water Ledger</h1>
-      <p class="sub">Import your chat history from Claude, ChatGPT and Gemini. The ledger counts the tokens in every prompt and reply, then estimates the water data centers used to cool the hardware and generate the power.</p>
+      <span class="label">Personal AI water footprint</span>
+      <h1 class="brand"><svg class="mark" viewBox="14 23 72 61" aria-hidden="true"><rect x="16" y="25" width="68" height="10" rx="5" fill="var(--line)"/><rect x="16" y="25" width="40" height="10" rx="5" fill="var(--drop)"/><rect x="44" y="25" width="12" height="29" rx="6" fill="var(--ink)"/><path d="M50 58C50 58 41.5 67.2 41.5 73.5a8.5 8.5 0 0 0 17 0C58.5 67.2 50 58 50 58Z" fill="var(--drop)"/></svg>DripStat</h1>
+      <p class="sub">Import your chat history from Claude, ChatGPT and Gemini. DripStat counts the tokens in every prompt and reply, then estimates the water data centers used to cool the hardware and generate the power.</p>
     </div>
   </header>
 
@@ -197,7 +209,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
     </div>
     <label class="drop" id="drop" for="fileAny">
       <strong>Drop export files here</strong> or click to choose.
-      <span style="display:block;font-size:13px;margin-top:4px">Accepts the .zip each service emails you, or the conversations.json / MyActivity.json inside it. The ledger works out which service it came from.</span>
+      <span style="display:block;font-size:13px;margin-top:4px">Accepts the .zip each service emails you, or the conversations.json / MyActivity.json inside it. DripStat works out which service it came from.</span>
     </label>
     <input type="file" id="fileAny" accept=".zip,.json,.html" multiple hidden>
     <div id="status" role="status" aria-live="polite"></div>
@@ -253,7 +265,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
         <label for="mUnit">Unit
           <select id="mUnit"><option value="tokens">Tokens</option><option value="msgs">Messages</option></select>
         </label>
-        <div class="full"><button class="primary" type="submit">Add to ledger</button></div>
+        <div class="full"><button class="primary" type="submit">Add to DripStat</button></div>
       </form>
       <div class="log" id="log"></div>
     </section>
@@ -262,7 +274,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
   <section class="panel" aria-label="About these numbers">
     <h2>About these numbers</h2>
     <div class="notes">
-      <p>Claude, ChatGPT and Gemini don't offer a way to sign in and read your token usage from another site, so the ledger connects to each account through its data export. Re-import whenever you want to refresh a service; the new file replaces the old one for that service.</p>
+      <p>Claude, ChatGPT and Gemini don't offer a way to sign in and read your token usage from another site, so DripStat connects to each account through its data export. Re-import whenever you want to refresh a service; the new file replaces the old one for that service.</p>
       <ul>
         <li><b>Tokens</b> are counted from the text in your exported chats at about 4 characters per token. Hidden reasoning, file and image processing, and the conversation history re-read on every turn are not in the export, so real usage is higher.</li>
         <li><b>Provider-reported</b> uses Google's August 2025 figure for a median Gemini text prompt (0.24 Wh, 0.26 mL) and OpenAI's similar 0.34 Wh / 0.32 mL per query. It covers cooling at the data center only.</li>
@@ -526,7 +538,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
     $("heroLabel").textContent = state.sample ? "Estimated water used (example)" : "Estimated water used";
     $("range").innerHTML = tokens
       ? `From <b class="num">${fmtTok(tokens)}</b> tokens${since ? ` since ${since}` : ""}. Plausible range <span class="num">${wStr(lo)}</span> to <span class="num">${wStr(hi)}</span> depending on method.`
-      : "Import an export or log some usage to start the ledger.";
+      : "Import an export or log some usage to start tracking.";
     const L = ml / 1000;
     const eq = [
       [L / 0.25, "glasses of water (250 mL)"],

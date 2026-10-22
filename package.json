@@ -1,0 +1,13 @@
+{
+  "name": "dripstat",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "logo": "node scripts/make-logo.mjs"
+  },
+  "devDependencies": {
+    "@fontsource/unbounded": "5.3.0",
+    "opentype.js": "2.0.0",
+    "playwright": "1.64.1"
+  }
+}

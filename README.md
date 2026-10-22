@@ -1,6 +1,12 @@
-# AI Water Ledger
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/dripstat-logo-on-dark.svg">
+    <img src="brand/dripstat-logo-on-light.svg" alt="DripStat" width="360">
+  </picture>
+</p>
 
-Estimate how much water your AI chats used.
+<p align="center"><b>How much water did your AI chats use?</b><br>
+<a href="https://awnsh.github.io/dripstat/">awnsh.github.io/dripstat</a></p>
 
 Import your chat history exports from **Claude**, **ChatGPT** and **Gemini**. The page counts the tokens in every prompt and reply, then estimates the water data centers used to cool their hardware and to generate the electricity.
 
@@ -29,6 +35,15 @@ water = tokens ÷ 1,000 × Wh per 1k tokens × (on-site WUE + PUE × power-plant
 | Li et al. 2023 | ~17 | "Making AI Less Thirsty", GPT-3-era hardware; an upper bound |
 
 All four inputs can be adjusted on the page.
+
+## Brand
+
+Logo files live in [`brand/`](brand). `scripts/make-logo.mjs` generates them, outlining the wordmark from Unbounded SemiBold as TubeStat does:
+
+```
+npm install
+npm run logo
+```
 
 ## Limits
 
