@@ -2,8 +2,8 @@
 // Unbounded SemiBold so it renders identically everywhere), and PNG icons.
 //   npm install && npm run logo
 //
-// The mark: a usage bar, filled with water, forms the pipe of a tap; a drop
-// falls from the spout. Same construction and type as TubeStat's T.
+// The mark: three rising usage bars, the tallest filled with water, with a drop
+// falling onto it. Same construction and type as TubeStat's T.
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import opentype from 'opentype.js';
@@ -15,29 +15,29 @@ mkdirSync(brand, { recursive: true });
 
 const C = { ink: '#111113', paper: '#f2f0eb', water: '#1e90ff', track: '#4a4946', trackLight: '#d6d3cc' };
 
-/** The glyph in a 100×100 box. `spout` and `track` colours change for light backgrounds. */
-const glyph = (spout = C.paper, track = C.track) =>
-  `<rect x="16" y="25" width="68" height="10" rx="5" fill="${track}"/>` +
-  `<rect x="16" y="25" width="40" height="10" rx="5" fill="${C.water}"/>` +
-  `<rect x="44" y="25" width="12" height="29" rx="6" fill="${spout}"/>` +
-  `<path d="M50 58C50 58 41.5 67.2 41.5 73.5a8.5 8.5 0 0 0 17 0C58.5 67.2 50 58 50 58Z" fill="${C.water}"/>`;
+/** The glyph in a 100×100 box. The `track` colour of the short bars changes for light backgrounds. */
+const glyph = (track = C.track) =>
+  `<rect x="16" y="58" width="16" height="24" rx="6" fill="${track}"/>` +
+  `<rect x="42" y="46" width="16" height="36" rx="6" fill="${track}"/>` +
+  `<rect x="68" y="38" width="16" height="44" rx="6" fill="${C.water}"/>` +
+  `<path d="M76 12C76 12 69 20 69 25a7 7 0 0 0 14 0C83 20 76 12 76 12Z" fill="${C.water}"/>`;
 
 const svg = (w, h, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${body}</svg>\n`;
 
-// App icon: glyph on the ink tile, nudged down so the shape sits optically centred.
-const icon = svg(100, 100, `<rect width="100" height="100" rx="22" fill="${C.ink}"/><g transform="translate(0 -3)">${glyph()}</g>`);
+// App icon: glyph on the ink tile, nudged down so the shape sits centred.
+const icon = svg(100, 100, `<rect width="100" height="100" rx="22" fill="${C.ink}"/><g transform="translate(0 3)">${glyph()}</g>`);
 // Bare glyphs for placing on a page background, cropped tight to the shape.
-const [vx, vy, vw0, vh] = [14, 23, 72, 61];
+const [vx, vy, vw0, vh] = [14, 10, 72, 74];
 const tight = (body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${vw0} ${vh}" width="${vw0}" height="${vh}">${body}</svg>\n`;
 const markDark = tight(glyph());
-const markLight = tight(glyph(C.ink, C.trackLight));
+const markLight = tight(glyph(C.trackLight));
 
 // Wordmark lockups.
 const fontFile = readFileSync(resolve(root, 'node_modules/@fontsource/unbounded/files/unbounded-latin-600-normal.woff'));
 const font = opentype.parse(fontFile.buffer.slice(fontFile.byteOffset, fontFile.byteOffset + fontFile.byteLength));
-// Caps a little shorter than the mark (cap 40 of the glyph's 57) to balance Unbounded's weight.
+// Caps match the tallest bar (44), so the word lines up with the chart.
 const capHeight = font.tables.os2?.sCapHeight || font.unitsPerEm * 0.7;
-const size = Math.round((40 * font.unitsPerEm) / capHeight); // whole sizes avoid NaN points in opentype.js
+const size = Math.round((44 * font.unitsPerEm) / capHeight); // whole sizes avoid NaN points in opentype.js
 const tracking = -0.02 * size;
 function textPath(str, x, y) {
   const scale = size / font.unitsPerEm;
@@ -53,17 +53,17 @@ const word = 'DripStat';
 const bb = textPath(word, 0, 0).getBoundingBox();
 const textW = bb.x2 - bb.x1;
 const gap = 16;
-// Baseline sits on the bottom of the drop; descender of the p hangs below.
+// Baseline sits on the foot of the bars; descender of the p hangs below.
 const baseline = 82;
-const lockup = (spout, track, ink) => {
+const lockup = (track, ink) => {
   const x0 = 84 + gap;
   const p = textPath(word, x0 - bb.x1, baseline).toPathData(2);
   const vw = Math.ceil(x0 + textW + 2 - vx);
   const h = Math.ceil(baseline + bb.y2 + 2 - vy);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${vw} ${h}" width="${vw}" height="${h}">${glyph(spout, track)}<path d="${p}" fill="${ink}"/></svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${vw} ${h}" width="${vw}" height="${h}">${glyph(track)}<path d="${p}" fill="${ink}"/></svg>\n`;
 };
-const lockupDark = lockup(C.paper, C.track, C.paper);
-const lockupLight = lockup(C.ink, C.trackLight, C.ink);
+const lockupDark = lockup(C.track, C.paper);
+const lockupLight = lockup(C.trackLight, C.ink);
 
 const files = {
   'dripstat-icon.svg': icon,
