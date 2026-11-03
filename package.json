@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "logo": "node scripts/make-logo.mjs"
+    "logo": "node scripts/make-logo.mjs",
+    "pack": "node scripts/pack-extension.mjs"
   },
   "devDependencies": {
     "@fontsource/unbounded": "5.3.0",

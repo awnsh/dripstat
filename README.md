@@ -24,7 +24,7 @@ Drop the downloaded `.zip` files (or the `conversations.json` / `MyActivity.json
 
 ## Live updates
 
-To skip re-exporting, install the **DripStat Live** browser extension from [`extension/`](extension). It counts the tokens in new chats on claude.ai, chatgpt.com and gemini.google.com as you go, and DripStat picks the totals up automatically. Chat text never leaves your browser. Import an export once to fill in older history.
+To skip re-exporting, install the **DripStat Live** browser extension: download it from the site ([dripstat-live.zip](https://awnsh.github.io/dripstat/dripstat-live.zip)); the source is in [`extension/`](extension). After changing it, run `npm run pack` to rebuild the zip. It counts the tokens in new chats on claude.ai, chatgpt.com and gemini.google.com as you go, and DripStat picks the totals up automatically. Chat text never leaves your browser. Import an export once to fill in older history.
 
 ## How water is estimated
 

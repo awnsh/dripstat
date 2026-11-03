@@ -123,6 +123,11 @@ section { padding-block: 64px; border-top: 1px solid var(--line); }
 .way ul { margin: 0; padding-left: 20px; color: var(--ink-2); font-size: 15px; display: grid; gap: 6px; }
 .way .tag { justify-self: start; font-size: 12px; font-weight: 600; border-radius: 99px; padding: 3px 10px; background: var(--accent-soft); color: var(--accent); }
 .way .tag.plain { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+.install { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 8px; border-radius: 10px; transition: background .4s, box-shadow .4s; }
+.install:focus { outline: none; }
+.install.flash { background: var(--accent-soft); box-shadow: 0 0 0 10px var(--accent-soft); }
+.install ol { margin: 0; padding-left: 20px; color: var(--ink-2); font-size: 15px; display: grid; gap: 6px; }
+.install code { font-family: var(--f-mono); font-size: 13px; background: var(--bg); border-radius: 5px; padding: 1px 5px; overflow-wrap: anywhere; }
 .services { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
 
 .methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
@@ -188,7 +193,7 @@ footer a { color: var(--ink-2); }
       <p class="lede">Every prompt runs on servers that need cooling and power, and both use water. DripStat counts the tokens in your Claude, ChatGPT and Gemini chats and turns them into litres.</p>
       <div class="ctas">
         <a class="btn primary" href="app.html">Open DripStat</a>
-        <a class="btn" href="https://github.com/awnsh/dripstat/tree/main/extension">Get the live extension</a>
+        <a class="btn dl" href="dripstat-live.zip" download>Download the extension</a>
       </div>
       <div class="trust"><span>Free</span><span>No sign-up</span><span>Runs in your browser</span></div>
     </div>
@@ -256,7 +261,16 @@ footer a { color: var(--ink-2); }
           <li>Keeps only daily token counts, never your messages</li>
           <li>Skips chats already on the page, so nothing counts twice</li>
         </ul>
-        <a class="btn primary" style="justify-self:start" href="https://github.com/awnsh/dripstat/tree/main/extension">Install the extension</a>
+        <a class="btn primary dl" style="justify-self:start" href="dripstat-live.zip" download>Download the extension</a>
+        <div class="install" id="install" tabindex="-1">
+          <span class="label">Install in Chrome, Edge or Brave</span>
+          <ol>
+            <li>Unzip <b>dripstat-live.zip</b>.</li>
+            <li>Go to <code>chrome://extensions</code> (or <code>edge://extensions</code>) and turn on <b>Developer mode</b>.</li>
+            <li>Click <b>Load unpacked</b> and choose the <b>dripstat-live</b> folder.</li>
+            <li>Open DripStat. It says <b>DripStat Live is on</b> when connected.</li>
+          </ol>
+        </div>
       </article>
       <article class="way">
         <span class="tag plain">Your full history</span>
@@ -320,9 +334,19 @@ footer a { color: var(--ink-2); }
     <p>It takes a minute with an export, or no time at all with the extension. Start with example data if you just want to look around.</p>
     <div class="ctas" style="justify-content:center">
       <a class="btn primary" href="app.html">Open DripStat</a>
-      <a class="btn" href="https://github.com/awnsh/dripstat/tree/main/extension">Get the extension</a>
+      <a class="btn dl" href="dripstat-live.zip" download>Download the extension</a>
     </div>
   </div>
+
+  <script>
+    // The download starts from the link itself; also bring up the install steps.
+    for (const a of document.querySelectorAll("a.dl")) a.addEventListener("click", () => {
+      const box = document.getElementById("install");
+      box.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+      box.focus({ preventScroll: true });
+      box.classList.add("flash"); setTimeout(() => box.classList.remove("flash"), 1600);
+    });
+  </script>
 
   <footer>
     <span>DripStat. The numbers are estimates, and real usage is likely higher than counted.</span>
