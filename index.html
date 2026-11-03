@@ -9,6 +9,7 @@
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#111113">
+<meta name="dripstat-live" content="1">
 <meta property="og:title" content="DripStat">
 <meta property="og:description" content="How much water did your AI chats use? Import your Claude, ChatGPT and Gemini exports to find out.">
 <meta property="og:image" content="https://awnsh.github.io/dripstat/brand/dripstat-social.png">
@@ -183,7 +184,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
     <div style="display:grid;gap:6px">
       <span class="label">Personal AI water footprint</span>
       <h1 class="brand"><svg class="mark" viewBox="14 10 72 74" aria-hidden="true"><rect x="16" y="58" width="16" height="24" rx="6" fill="var(--line)"/><rect x="42" y="46" width="16" height="36" rx="6" fill="var(--line)"/><rect x="68" y="38" width="16" height="44" rx="6" fill="var(--drop)"/><path d="M76 12C76 12 69 20 69 25a7 7 0 0 0 14 0C83 20 76 12 76 12Z" fill="var(--drop)"/></svg>DripStat</h1>
-      <p class="sub">Import your chat history from Claude, ChatGPT and Gemini. DripStat counts the tokens in every prompt and reply, then estimates the water data centers used to cool the hardware and generate the power.</p>
+      <p class="sub">Import your chat history from Claude, ChatGPT and Gemini, or let the DripStat Live extension count new chats as you go. DripStat counts the tokens in every prompt and reply, then estimates the water data centers used to cool the hardware and generate the power.</p>
     </div>
   </header>
 
@@ -212,6 +213,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
       <span style="display:block;font-size:13px;margin-top:4px">Accepts the .zip each service emails you, or the conversations.json / MyActivity.json inside it. DripStat works out which service it came from.</span>
     </label>
     <input type="file" id="fileAny" accept=".zip,.json,.html" multiple hidden>
+    <p class="meta" id="liveNote"></p>
     <div id="status" role="status" aria-live="polite"></div>
     <div class="accounts" id="accounts"></div>
   </section>
@@ -274,7 +276,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
   <section class="panel" aria-label="About these numbers">
     <h2>About these numbers</h2>
     <div class="notes">
-      <p>Claude, ChatGPT and Gemini don't offer a way to sign in and read your token usage from another site, so DripStat connects to each account through its data export. Re-import whenever you want to refresh a service; the new file replaces the old one for that service.</p>
+      <p>Claude, ChatGPT and Gemini don't offer a way to sign in and read your token usage from another site. DripStat gets your history from each service's data export, and the optional DripStat Live browser extension counts new prompts and replies as they appear in claude.ai, chatgpt.com and gemini.google.com. The extension only keeps token counts per day; chat text never leaves your browser. On days covered by both, DripStat uses whichever counted more, so nothing is counted twice.</p>
       <ul>
         <li><b>Tokens</b> are counted from the text in your exported chats at about 4 characters per token. Hidden reasoning, file and image processing, and the conversation history re-read on every turn are not in the export, so real usage is higher.</li>
         <li><b>Provider-reported</b> uses Google's August 2025 figure for a median Gemini text prompt (0.24 Wh, 0.26 mL) and OpenAI's similar 0.34 Wh / 0.32 mL per query. It covers cooling at the data center only.</li>
@@ -319,8 +321,9 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
   function blank() {
-    return { imports: {}, manual: [], method: { preset: "mid", ...pick(PRESETS[1]) }, sample: false };
+    return { imports: {}, manual: [], live: {}, method: { preset: "mid", ...pick(PRESETS[1]) }, sample: false };
   }
+  let ext = null; // { version } once the DripStat Live extension answers
   function pick(p) { return { wh: p.wh, wue: p.wue, pue: p.pue, ewif: p.ewif }; }
 
   function seedSample() {
@@ -364,12 +367,23 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
   const mlPer1k = m => m.wh / 1000 * (m.wue + m.pue * m.ewif) * 1000; // mL per 1k tokens
   const water = (tokens, m = state.method) => tokens / 1000 * mlPer1k(m);
 
-  // Collapse imports + manual entries into { date: { provider: tokens } }
+  // Export and live counts describe the same chats, so on each day take whichever counted more.
+  function merged(pid) {
+    const imp = state.imports[pid], live = (state.live || {})[pid];
+    const days = { ...(imp ? imp.days : {}) };
+    let convs = imp ? imp.convs || 0 : 0;
+    for (const [d, v] of Object.entries(live ? live.days : {})) {
+      if (!days[d] || v.in + v.out > days[d].in + days[d].out) { days[d] = v; convs += v.convs || 0; }
+    }
+    return { days, convs };
+  }
+
+  // Collapse imports, live counts and manual entries into { date: { provider: tokens } }
   function daily() {
     const out = {};
-    for (const [pid, imp] of Object.entries(state.imports)) {
-      for (const [d, v] of Object.entries(imp.days)) {
-        (out[d] ||= {})[pid] = ((out[d] || {})[pid] || 0) + v.in + v.out;
+    for (const p of PROVIDERS) {
+      for (const [d, v] of Object.entries(merged(p.id).days)) {
+        (out[d] ||= {})[p.id] = v.in + v.out;
       }
     }
     for (const e of state.manual) {
@@ -380,9 +394,9 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
   function providerTotals() {
     const t = {};
     for (const p of PROVIDERS) t[p.id] = { tokens: 0, msgs: 0, convs: 0, first: null, last: null };
-    for (const [pid, imp] of Object.entries(state.imports)) {
-      const r = t[pid]; r.convs += imp.convs || 0;
-      for (const [d, v] of Object.entries(imp.days)) {
+    for (const p of PROVIDERS) {
+      const m = merged(p.id), r = t[p.id]; r.convs += m.convs;
+      for (const [d, v] of Object.entries(m.days)) {
         r.tokens += v.in + v.out; r.msgs += v.msgs;
         if (!r.first || d < r.first) r.first = d;
         if (!r.last || d > r.last) r.last = d;
@@ -523,7 +537,13 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
 
   function render() {
     $("sampleBanner").hidden = !state.sample;
-    renderHero(); renderAccounts(); renderChart(); renderMethod(); renderLog();
+    renderHero(); renderAccounts(); renderChart(); renderMethod(); renderLog(); renderLiveNote();
+  }
+
+  function renderLiveNote() {
+    $("liveNote").innerHTML = ext
+      ? `<b>DripStat Live is on.</b> New chats in Claude, ChatGPT and Gemini update these numbers as you go. Import an export once to fill in older history.`
+      : `Skip re-exporting: install the <a href="https://github.com/awnsh/dripstat/tree/main/extension" target="_blank" rel="noopener">DripStat Live browser extension</a> and new chats will update DripStat automatically.`;
   }
 
   function renderHero() {
@@ -578,11 +598,16 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
     const t = providerTotals();
     $("accounts").innerHTML = PROVIDERS.map(p => {
       const imp = state.imports[p.id]; const r = t[p.id];
+      const live = (state.live || {})[p.id];
       const hasManual = state.manual.some(e => e.provider === p.id);
       const pill = state.sample ? `<span class="pill ex">Example</span>`
-        : imp ? `<span class="pill on">Connected</span>`
+        : live && ext ? `<span class="pill on">Live</span>`
+        : imp || live ? `<span class="pill on">Connected</span>`
         : hasManual ? `<span class="pill">Manual only</span>` : `<span class="pill">Not connected</span>`;
-      const when = imp && !state.sample ? `Imported ${new Date(imp.importedAt).toLocaleDateString()} from ${esc(imp.file)}` : state.sample ? "Example numbers" : "No export imported yet";
+      const when = state.sample ? "Example numbers" : [
+        imp ? `Imported ${new Date(imp.importedAt).toLocaleDateString()} from ${esc(imp.file)}` : "No export imported yet",
+        live ? `live counts updated ${new Date(live.updatedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : "",
+      ].filter(Boolean).join(" · ");
       return `<article class="acct">
         <div class="acct-head"><h3><span class="dot" style="background:${p.color}"></span>${p.name}</h3>${pill}</div>
         <div class="stats">
@@ -734,6 +759,18 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
 
   $("clearSample").onclick = () => { const m = state.method; state = blank(); state.method = m; save(); render(); };
 
+  // Live counts from the DripStat Live extension (extension/bridge.js).
+  window.addEventListener("message", e => {
+    const d = e.data;
+    if (e.source !== window || !d || d.source !== "dripstat-ext" || d.type !== "live") return;
+    ext = { version: d.version };
+    const live = d.live && typeof d.live === "object" ? d.live : {};
+    const has = Object.values(live).some(p => p && Object.keys(p.days || {}).length);
+    if (has && state.sample) { const m = state.method; state = blank(); state.method = m; }
+    state.live = live; save(); render();
+  });
+  window.postMessage({ source: "dripstat-page", type: "hello" }, location.origin);
+
   $("rangeSeg").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     rangeDays = +b.dataset.days;
@@ -776,6 +813,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
     const b = e.currentTarget;
     if (!b.dataset.confirm) { b.dataset.confirm = "1"; b.textContent = "Click again to delete everything"; return; }
     const m = state.method; state = blank(); state.method = m; save(); render();
+    if (ext) window.postMessage({ source: "dripstat-page", type: "clear" }, location.origin);
     delete b.dataset.confirm; b.textContent = "Delete all data"; $("footMsg").textContent = "All data deleted.";
   };
 

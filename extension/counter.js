@@ -1,0 +1,156 @@
+// Runs on claude.ai, chatgpt.com and gemini.google.com. Watches the chat for new
+// prompts and replies, counts their tokens (about 4 characters each, same as the
+// DripStat page), and sends only the counts to the background worker.
+//
+// Messages already on the page are history (they're in your export), so a
+// message only counts when it appears after you send something. Three guards:
+//   - armed: new messages count only for a while after you press Enter or a button
+//   - baseline: after switching conversations, whatever loads is history
+//   - position: messages that load above ones already seen (scrolling up) are history
+(() => {
+  const SITES = {
+    "claude.ai": {
+      provider: "claude",
+      user: '[data-testid="user-message"]',
+      assistant: ".font-claude-response, .font-claude-message",
+      conv: p => (p.match(/^\/chat\/([\w-]+)/) || [])[1] || null,
+    },
+    "chatgpt.com": {
+      provider: "chatgpt",
+      user: '[data-message-author-role="user"]',
+      assistant: '[data-message-author-role="assistant"]',
+      conv: p => (p.match(/\/c\/([\w-]+)/) || [])[1] || null,
+      id: el => el.getAttribute("data-message-id"),
+    },
+    "gemini.google.com": {
+      provider: "gemini",
+      user: "user-query",
+      assistant: "model-response",
+      conv: p => (p.match(/\/app\/(\w+)/) || [])[1] || null,
+      text: el => (el.querySelector(".query-text, message-content") || el).textContent,
+    },
+  };
+  SITES["chat.openai.com"] = SITES["chatgpt.com"];
+  const site = SITES[location.hostname];
+  if (!site) return;
+
+  const ALL = `${site.user}, ${site.assistant}`;
+  const ARM_MS = 3 * 60e3, GROW_MS = 60e3, BASE_MIN = 2500, BASE_QUIET = 1500;
+  const tok = s => Math.ceil(s.length / 4);
+  const norm = s => (s || "").replace(/\s+/g, " ").trim();
+  const getText = el => norm(site.text ? site.text(el) : el.textContent);
+  const fp = (role, text) => role + ":" + text.slice(0, 120);
+  const dayKey = d => { const z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; };
+
+  const byEl = new WeakMap(), byId = new Map(), byFp = new Map();
+  let conv = { id: site.conv(location.pathname), hasMessages: false };
+  let armedUntil = 0, baselineFrom = Date.now(), lastMutation = Date.now();
+
+  const recordFor = el => byEl.get(el) || (site.id && byId.get(site.id(el))) || null;
+  function bind(el, rec) {
+    byEl.set(el, rec);
+    const id = site.id && site.id(el);
+    if (id) byId.set(id, rec);
+  }
+  function setText(rec, role, text) {
+    if (rec.fp) byFp.delete(rec.fp);
+    rec.tokens = tok(text); rec.head = text.slice(0, 60); rec.fp = fp(role, text);
+    byFp.set(rec.fp, rec);
+  }
+
+  function checkConversation() {
+    const id = site.conv(location.pathname);
+    if (id === conv.id) return;
+    // A new chat getting its id after the first message is the same conversation.
+    const sameChat = conv.id === null && id !== null && conv.hasMessages;
+    if (!sameChat) { conv = { id, hasMessages: false }; byFp.clear(); baselineFrom = Date.now(); }
+    else conv.id = id;
+  }
+
+  function scan() {
+    checkConversation();
+    const now = Date.now();
+    const baseline = baselineFrom > 0;
+    const armed = now < armedUntil;
+    const els = [...document.querySelectorAll(ALL)].filter(el => !el.parentElement || !el.parentElement.closest(ALL));
+    let lastKnown = -1;
+    els.forEach((el, i) => { if (recordFor(el)) lastKnown = i; });
+    const add = { tokensIn: 0, tokensOut: 0, msgs: 0, convs: 0 };
+
+    els.forEach((el, i) => {
+      const role = el.matches(site.user) ? "user" : "assistant";
+      const text = getText(el);
+      if (!text) return;
+      let rec = recordFor(el);
+      if (!rec) {
+        // Re-rendered copy of a message we already have (React remounts, new chat getting its id).
+        const prev = byFp.get(fp(role, text));
+        if (prev && !(prev.el && prev.el.deref() && prev.el.deref().isConnected)) rec = prev;
+      }
+      const counting = armed && !baseline;
+      if (!rec) {
+        rec = {};
+        const isNew = counting && i > lastKnown;
+        if (isNew) {
+          const n = tok(text);
+          // A prompt with nothing above it starts a new chat.
+          if (role === "user") { add.tokensIn += n; add.msgs++; if (i === 0) add.convs++; }
+          else add.tokensOut += n;
+        }
+        conv.hasMessages = true;
+      } else {
+        const n = tok(text);
+        // Streaming replies grow in place; count the growth. Text that was swapped
+        // out entirely is a different message reusing the element: only the newest
+        // one (a regenerated reply) counts.
+        const grew = text.startsWith(rec.head) && n > rec.tokens;
+        const replaced = !text.startsWith(rec.head) && i === els.length - 1;
+        if (counting && (grew || replaced)) {
+          const d = grew ? n - rec.tokens : n;
+          if (role === "user") add.tokensIn += d; else add.tokensOut += d;
+        }
+        if (grew && armed) armedUntil = Math.max(armedUntil, now + GROW_MS);
+      }
+      rec.el = new WeakRef(el);
+      bind(el, rec);
+      setText(rec, role, text);
+    });
+
+    if (baseline && now - baselineFrom > BASE_MIN && now - lastMutation > BASE_QUIET) baselineFrom = 0;
+    if (add.tokensIn || add.tokensOut) send(add);
+  }
+
+  function send(add) {
+    // If the extension was reloaded or removed, this page's counter is orphaned.
+    const stop = () => { observer.disconnect(); clearInterval(tick); };
+    try {
+      chrome.runtime.sendMessage({ type: "add", provider: site.provider, date: dayKey(new Date()), ...add }).catch(stop);
+    } catch { stop(); }
+  }
+
+  // Arm on sending: Enter in the composer, or any button press outside navigation
+  // (send, retry, regenerate, edit-and-save).
+  const arm = () => { armedUntil = Date.now() + ARM_MS; };
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+    const t = e.target;
+    if (t && (t.tagName === "TEXTAREA" || t.isContentEditable)) arm();
+  }, true);
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("button, [role=button]");
+    if (b && !b.closest("nav, aside, header")) arm();
+  }, true);
+
+  let timer = null, firstPending = 0;
+  const observer = new MutationObserver(() => {
+    lastMutation = Date.now();
+    if (!firstPending) firstPending = lastMutation;
+    clearTimeout(timer);
+    // Debounce, but keep counting every few seconds while a reply streams.
+    const wait = Math.max(0, Math.min(700, firstPending + 3000 - lastMutation));
+    timer = setTimeout(() => { firstPending = 0; scan(); }, wait);
+  });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  const tick = setInterval(scan, 1000);
+  scan();
+})();

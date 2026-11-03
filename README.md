@@ -22,6 +22,10 @@ Everything runs in your browser. Export files are never uploaded, and totals are
 
 Drop the downloaded `.zip` files (or the `conversations.json` / `MyActivity.json` inside them) onto the page.
 
+## Live updates
+
+To skip re-exporting, install the **DripStat Live** browser extension from [`extension/`](extension). It counts the tokens in new chats on claude.ai, chatgpt.com and gemini.google.com as you go, and DripStat picks the totals up automatically. Chat text never leaves your browser. Import an export once to fill in older history.
+
 ## How water is estimated
 
 ```
@@ -38,7 +42,7 @@ All four inputs can be adjusted on the page.
 
 ## Brand
 
-Logo files live in [`brand/`](brand). `scripts/make-logo.mjs` generates them, outlining the wordmark from Unbounded SemiBold as TubeStat does:
+Logo files live in [`brand/`](brand). `scripts/make-logo.mjs` generates them (and the extension's icons), outlining the wordmark from Unbounded SemiBold as TubeStat does:
 
 ```
 npm install

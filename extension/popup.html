@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+:root { --bg: #f2f0eb; --ink: #111113; --muted: #6b6963; --line: #d6d3cc; --accent: #1e90ff; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg: #111113; --ink: #f2f0eb; --muted: #a8a69f; --line: #34332f; } }
+body { margin: 0; width: 280px; padding: 14px; background: var(--bg); color: var(--ink); font: 13px/1.4 system-ui, sans-serif; }
+h1 { font-size: 15px; margin: 0 0 2px; display: flex; gap: 6px; align-items: center; }
+h1 img { width: 18px; height: 18px; }
+p { margin: 0 0 10px; color: var(--muted); }
+table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+th, td { text-align: right; padding: 5px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--muted); font-size: 12px; }
+.row { display: flex; gap: 8px; }
+button, a.btn { flex: 1; font: inherit; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; text-align: center; text-decoration: none; }
+a.btn { background: var(--accent); border-color: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+<h1><img src="icons/32.png" alt="">DripStat Live</h1>
+<p>Counting tokens in new Claude, ChatGPT and Gemini chats. Chat text stays in this browser.</p>
+<table>
+  <thead><tr><th>Service</th><th>Today</th><th>Since installed</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<div class="row">
+  <a class="btn" href="https://awnsh.github.io/dripstat/" target="_blank" rel="noopener">Open DripStat</a>
+  <button type="button" id="clear">Clear counts</button>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

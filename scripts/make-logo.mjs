@@ -85,6 +85,8 @@ async function png(svgText, w, h, out) {
 await png(icon, 512, 512, resolve(brand, 'dripstat-icon-512.png'));
 await png(icon, 180, 180, resolve(root, 'apple-touch-icon.png'));
 await png(icon, 32, 32, resolve(root, 'favicon-32.png'));
+mkdirSync(resolve(root, 'extension/icons'), { recursive: true });
+for (const s of [16, 32, 48, 128]) await png(icon, s, s, resolve(root, `extension/icons/${s}.png`));
 for (const [name, body] of [['dripstat-logo-on-dark.png', lockupDark], ['dripstat-logo-on-light.png', lockupLight]]) {
   const [lw, lh] = body.match(/width="(\d+)" height="(\d+)"/).slice(1).map(Number);
   await png(body, lw * 4, lh * 4, resolve(brand, name));
