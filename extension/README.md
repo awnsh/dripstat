@@ -10,7 +10,7 @@ A browser extension that keeps [DripStat](https://awnsh.github.io/dripstat/app.h
 
 1. Download [dripstat-live.zip](https://awnsh.github.io/dripstat/dripstat-live.zip) from the DripStat site and unzip it (or clone this repository).
 2. Open `chrome://extensions` (or `edge://extensions`) and turn on **Developer mode**.
-3. Click **Load unpacked** and pick the unzipped `dripstat-live` folder (or this `extension` folder).
+3. Click **Load unpacked** and pick the unzipped `dripstat-live` folder, the one with `manifest.json` inside (or this `extension` folder).
 4. Open DripStat. The accounts section says **DripStat Live is on** once it's connected.
 
 Click the extension's icon to see today's counts or clear them.

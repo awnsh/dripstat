@@ -1,5 +1,8 @@
 // Zips extension/ into dripstat-live.zip at the site root, which the site's
-// download buttons serve. Run after changing the extension:
+// download buttons serve. Files sit at the top of the zip, not in a folder:
+// Windows "Extract all" already makes a dripstat-live folder, and a second one
+// inside it left manifest.json one level too deep for "Load unpacked".
+// Run after changing the extension:
 //   npm run pack
 // No dependencies: a minimal zip writer using Node's built-in deflate.
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -20,7 +23,7 @@ const DOS_TIME = 0, DOS_DATE = ((2026 - 1980) << 9) | (1 << 5) | 1;
 const local = [], central = [];
 let offset = 0;
 for (const file of walk(src)) {
-  const name = Buffer.from('dripstat-live/' + relative(src, file).replace(/\\/g, '/'));
+  const name = Buffer.from(relative(src, file).replace(/\\/g, '/'));
   const data = readFileSync(file);
   const packed = deflateRawSync(data, { level: 9 });
   const crc = crc32(data);
