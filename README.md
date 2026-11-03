@@ -6,7 +6,7 @@
 </p>
 
 <p align="center"><b>How much water did your AI chats use?</b><br>
-<a href="https://awnsh.github.io/dripstat/">awnsh.github.io/dripstat</a></p>
+<a href="https://awnsh.github.io/dripstat/">awnsh.github.io/dripstat</a> · <a href="https://awnsh.github.io/dripstat/app.html">open the tracker</a></p>
 
 Import your chat history exports from **Claude**, **ChatGPT** and **Gemini**. The page counts the tokens in every prompt and reply, then estimates the water data centers used to cool their hardware and to generate the electricity.
 

@@ -1,6 +1,6 @@
 # DripStat Live
 
-A browser extension that keeps [DripStat](https://awnsh.github.io/dripstat/) up to date without re-exporting. As you chat on **claude.ai**, **chatgpt.com** and **gemini.google.com**, it counts the tokens in each new prompt and reply (about 4 characters per token, the same as the page) and passes the daily totals to DripStat.
+A browser extension that keeps [DripStat](https://awnsh.github.io/dripstat/app.html) up to date without re-exporting. As you chat on **claude.ai**, **chatgpt.com** and **gemini.google.com**, it counts the tokens in each new prompt and reply (about 4 characters per token, the same as the page) and passes the daily totals to DripStat.
 
 - Chat text never leaves your browser. The extension stores only token, prompt and chat counts per day, in `chrome.storage.local`.
 - It doesn't sign in to anything or read your account; it reads the chat on the page you already have open.
