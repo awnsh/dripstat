@@ -61,8 +61,10 @@
   function checkConversation() {
     const id = site.conv(location.pathname);
     if (id === conv.id) return;
-    // A new chat getting its id after the first message is the same conversation.
-    const sameChat = conv.id === null && id !== null && conv.hasMessages;
+    // A new chat getting its id when you send is the same conversation. Gemini
+    // switches the URL before the prompt even shows, so go by the send, not by
+    // whether a message has appeared yet.
+    const sameChat = conv.id === null && id !== null && (conv.hasMessages || Date.now() < armedUntil);
     if (!sameChat) { conv = { id, hasMessages: false }; byFp.clear(); baselineFrom = Date.now(); }
     else conv.id = id;
   }
@@ -128,9 +130,11 @@
     } catch { stop(); }
   }
 
-  // Arm on sending: Enter in the composer, or any button press outside navigation
-  // (send, retry, regenerate, edit-and-save).
+  // Arm on sending: Enter in the composer, a button in the composer, or a
+  // send/retry/regenerate/edit button. Sidebar clicks don't arm, so opening an
+  // old chat never counts it (Gemini's sidebar isn't a <nav>).
   const arm = () => { armedUntil = Date.now() + ARM_MS; };
+  const SEND = /send|submit|retry|regenerate|redo|try again|save|update/i;
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter" || e.shiftKey || e.isComposing) return;
     const t = e.target;
@@ -138,7 +142,11 @@
   }, true);
   document.addEventListener("click", e => {
     const b = e.target.closest && e.target.closest("button, [role=button]");
-    if (b && !b.closest("nav, aside, header")) arm();
+    if (!b) return;
+    const box = b.closest("form, fieldset");
+    const inComposer = box && box.querySelector("textarea, [contenteditable=true]");
+    const label = (b.getAttribute("aria-label") || "") + " " + (b.getAttribute("data-testid") || "") + " " + b.textContent.slice(0, 40);
+    if (inComposer || SEND.test(label)) arm();
   }, true);
 
   let timer = null, firstPending = 0;
