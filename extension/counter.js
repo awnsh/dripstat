@@ -9,18 +9,27 @@
 //   - position: messages that load above ones already seen (scrolling up) are history
 (() => {
   const SITES = {
+    // Newer layout (Nov 2026): [data-testid=assistant-message] with a data-turn-key,
+    // in a virtualized transcript that unmounts rows scrolled out of view. Ids are a
+    // React prefix plus the message uuid; only the uuid survives a remount.
     "claude.ai": {
       provider: "claude",
       user: '[data-testid="user-message"]',
-      assistant: ".font-claude-response, .font-claude-message",
+      assistant: '[data-testid="assistant-message"], .font-claude-response, .font-claude-message',
       conv: p => (p.match(/^\/chat\/([\w-]+)/) || [])[1] || null,
+      id: el => el.getAttribute("data-turn-key") || (el.id && el.id.replace(/^_r_\w+?_/, "")) || null,
+      skip: '[role="toolbar"], [data-find-omitted], button',
     },
+    // Older layout: [data-message-author-role]. Newer one (Nov 2026):
+    // <li data-message-role> inside <ol data-conversation-transcript>, with a
+    // hidden "You said:" heading and action buttons to leave out of the count.
     "chatgpt.com": {
       provider: "chatgpt",
-      user: '[data-message-author-role="user"]',
-      assistant: '[data-message-author-role="assistant"]',
-      conv: p => (p.match(/\/c\/([\w-]+)/) || [])[1] || null,
-      id: el => el.getAttribute("data-message-id"),
+      user: '[data-message-author-role="user"], li[data-message-role="user"]',
+      assistant: '[data-message-author-role="assistant"], li[data-message-role="assistant"]',
+      conv: p => (p.match(/\/u?c\/([\w-]+)/) || [])[1] || null,
+      id: el => el.getAttribute("data-message-id") || el.id || null,
+      skip: "[data-message-attribution], [data-message-actions], button",
     },
     "gemini.google.com": {
       provider: "gemini",
@@ -38,7 +47,11 @@
   const ARM_MS = 3 * 60e3, GROW_MS = 60e3, BASE_MIN = 2500, BASE_QUIET = 1500;
   const tok = s => Math.ceil(s.length / 4);
   const norm = s => (s || "").replace(/\s+/g, " ").trim();
-  const getText = el => norm(site.text ? site.text(el) : el.textContent);
+  function getText(el) {
+    let t = site.text ? site.text(el) : el.textContent;
+    if (site.skip) for (const s of el.querySelectorAll(site.skip)) t = t.replace(s.textContent, "");
+    return norm(t);
+  }
   const fp = (role, text) => role + ":" + text.slice(0, 120);
   const dayKey = d => { const z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; };
 
