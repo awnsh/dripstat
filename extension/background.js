@@ -27,3 +27,14 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     return true;
   }
 });
+
+// Tabs open before an install, update or reload keep a counter tied to the old
+// extension, which can't send anything, so they'd stop counting until you
+// refreshed them. Start fresh copies of the content scripts in those tabs.
+chrome.runtime.onInstalled.addListener(async () => {
+  for (const { matches, js } of chrome.runtime.getManifest().content_scripts) {
+    for (const tab of await chrome.tabs.query({ url: matches })) {
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: js }).catch(() => {});
+    }
+  }
+});
