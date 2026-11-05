@@ -1,22 +1,69 @@
 {
   "manifest_version": 3,
   "name": "DripStat Live",
-  "version": "0.1.5",
-  "description": "Counts the tokens in your Claude, ChatGPT and Gemini chats as you go and keeps DripStat up to date. Chat text never leaves your browser.",
-  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
-  "action": { "default_popup": "popup.html", "default_icon": { "16": "icons/16.png", "32": "icons/32.png" } },
-  "background": { "service_worker": "background.js" },
-  "permissions": ["storage", "scripting"],
-  "host_permissions": ["https://claude.ai/*", "https://chatgpt.com/*", "https://chat.openai.com/*", "https://gemini.google.com/*", "https://awnsh.github.io/dripstat/*", "http://localhost/*", "http://127.0.0.1/*"],
+  "version": "0.1.6",
+  "description": "Counts the tokens in your Claude, ChatGPT and Gemini chats (including Google Search AI Overviews and AI Mode) as you go and keeps DripStat up to date. Chat text never leaves your browser.",
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://gemini.google.com/*",
+    "https://www.google.com/*",
+    "https://awnsh.github.io/dripstat/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://claude.ai/*", "https://chatgpt.com/*", "https://chat.openai.com/*", "https://gemini.google.com/*"],
-      "js": ["counter.js"],
+      "matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "counter.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://awnsh.github.io/dripstat/*", "http://localhost/*", "http://127.0.0.1/*"],
-      "js": ["bridge.js"],
+      "matches": [
+        "https://www.google.com/search*"
+      ],
+      "js": [
+        "google.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://awnsh.github.io/dripstat/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
       "run_at": "document_idle"
     }
   ]

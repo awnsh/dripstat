@@ -1,7 +1,7 @@
 const SERVICES = [
   { id: "claude", name: "Claude", color: "var(--s-claude)" },
   { id: "chatgpt", name: "ChatGPT", color: "var(--s-chatgpt)" },
-  { id: "gemini", name: "Gemini", color: "var(--s-gemini)" },
+  { id: "gemini", name: "Gemini", note: "incl. Google Search AI", color: "var(--s-gemini)" },
 ];
 // Same as DripStat's recommended "Cooling + power plants" method:
 // 0.4 Wh per 1k tokens × (1.1 L/kWh on site + 1.1 PUE × 3.1 L/kWh at the power plant).
@@ -83,7 +83,7 @@ function render(live) {
   const max = Math.max(1, ...rows.map(x => x.tokens));
   $("services").innerHTML = `<span class="label">By service</span>` + rows.map(x => `
     <div class="svc-row">
-      <span class="svc-name"><span class="dot" style="background:${x.color}"></span>${x.name}</span>
+      <span class="svc-name"><span class="dot" style="background:${x.color}"></span>${x.name}${x.note ? `<span class="note">${x.note}</span>` : ""}</span>
       <span class="svc-val"><span class="num">${wStr(x.tokens * ML_PER_TOKEN)}</span></span>
       <div class="bar"><span style="width:${(x.tokens / max) * 100}%;background:${x.color}"></span></div>
       <div class="svc-sub"><span>${ago(x.p && x.p.updatedAt)}</span><span class="num">${fmtTok(x.tokens)} tok</span></div>

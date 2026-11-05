@@ -1,9 +1,10 @@
 # DripStat Live
 
-A browser extension that keeps [DripStat](https://awnsh.github.io/dripstat/app.html) up to date without re-exporting. As you chat on **claude.ai**, **chatgpt.com** and **gemini.google.com**, it counts the tokens in each new prompt and reply (about 4 characters per token, the same as the page) and passes the daily totals to DripStat.
+A browser extension that keeps [DripStat](https://awnsh.github.io/dripstat/app.html) up to date without re-exporting. As you chat on **claude.ai**, **chatgpt.com** and **gemini.google.com**, and when Google Search shows an **AI Overview** or you use **AI Mode** (counted as Gemini), it counts the tokens in each new prompt and reply (about 4 characters per token, the same as the page) and passes the daily totals to DripStat.
 
 - Chat text never leaves your browser. The extension stores only token, prompt and chat counts per day, in `chrome.storage.local`.
 - It doesn't sign in to anything or read your account; it reads the chat on the page you already have open.
+- Google Search replies count when they finish appearing, since Google shows them without you sending anything. A short hash of each counted reply is kept for two days so reloading or going Back doesn't count it again. Only www.google.com is covered, not country domains like google.co.uk.
 - Messages already on the page are history and aren't counted, so opening old chats or scrolling up doesn't add anything. Import an export once on DripStat to fill in older history. On days covered by both, DripStat uses whichever counted more.
 
 ## Install (Chrome, Edge, Brave)
@@ -20,9 +21,10 @@ Click the extension's icon to see today's counts or clear them.
 | File | Runs on | Does |
 |---|---|---|
 | `counter.js` | claude.ai, chatgpt.com, gemini.google.com | Watches for new messages and counts their tokens |
+| `google.js` | google.com/search | Counts finished AI Overviews and AI Mode replies as Gemini, once each |
 | `background.js` | service worker | Adds counts from every tab to the daily totals |
 | `bridge.js` | DripStat (and `localhost` for development) | Sends the totals to the page and pushes updates |
-| `popup.html` | toolbar button | Today's and all-time counts |
+| `popup.html` | toolbar button | Estimated water and tokens by service, today, this week and all time |
 
 ## Limits
 
