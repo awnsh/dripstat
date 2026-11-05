@@ -45,6 +45,26 @@
     },
   };
   SITES["chat.openai.com"] = SITES["chatgpt.com"];
+  // Gemini side panel in Gmail and Docs (Nov 2026), in the page itself. It's a
+  // [data-feed-title] feed whose list has your prompts (a list item with a level-3
+  // heading) and replies ([data-generation-index]), plus suggestion chips to ignore.
+  // The page URL doesn't change per chat, and older chats aren't reloaded with the
+  // page, so it's one conversation that the "armed on send" guard covers.
+  SITES["mail.google.com"] = SITES["docs.google.com"] = {
+    provider: "gemini",
+    user: "[data-feed-title] [role=list] > [role=listitem]:not([data-generation-index]):has([role=heading])",
+    assistant: "[data-feed-title] [role=list] > [role=listitem][data-generation-index]",
+    conv: () => "panel",
+    id: el => el.hasAttribute("data-generation-index")
+      ? el.getAttribute("data-session-id") + ":" + el.getAttribute("data-generation-index") : null,
+    // Tooltips and the reply's menu sit next to the text, so read only the prompt's
+    // heading and the reply's body.
+    text: el => {
+      if (!el.hasAttribute("data-generation-index")) return (el.querySelector("[role=heading] [dir=auto]") || el).textContent;
+      const parts = [...el.querySelectorAll("[dir=auto]")].filter(d => !el.contains(d.parentElement.closest("[dir=auto]")));
+      return parts.length ? parts.map(d => d.textContent).join(" ") : el.textContent;
+    },
+  };
   const site = SITES[location.hostname];
   if (!site) return;
 

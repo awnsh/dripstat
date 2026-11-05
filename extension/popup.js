@@ -1,7 +1,7 @@
 const SERVICES = [
   { id: "claude", name: "Claude", color: "var(--s-claude)" },
   { id: "chatgpt", name: "ChatGPT", color: "var(--s-chatgpt)" },
-  { id: "gemini", name: "Gemini", note: "incl. Google Search AI", color: "var(--s-gemini)" },
+  { id: "gemini", name: "Gemini", note: "incl. Search, Gmail, Docs", color: "var(--s-gemini)" },
 ];
 // Same as DripStat's recommended "Cooling + power plants" method:
 // 0.4 Wh per 1k tokens × (1.1 L/kWh on site + 1.1 PUE × 3.1 L/kWh at the power plant).
