@@ -23,13 +23,18 @@
     // Older layout: [data-message-author-role]. Newer one (Nov 2026):
     // <li data-message-role> inside <ol data-conversation-transcript>, with a
     // hidden "You said:" heading and action buttons to leave out of the count.
+    // Newest (Nov 5 2026): role is only on a hidden <h4 data-conversation-role>;
+    // each message is a [data-chatgpt-search-unit-key] ending in :user or
+    // :assistant, with the message uuid in data-chatgpt-search-message-ids.
     "chatgpt.com": {
       provider: "chatgpt",
-      user: '[data-message-author-role="user"], li[data-message-role="user"]',
-      assistant: '[data-message-author-role="assistant"], li[data-message-role="assistant"]',
+      user: '[data-message-author-role="user"], li[data-message-role="user"], [data-chatgpt-search-unit-key$=":user"]',
+      assistant: '[data-message-author-role="assistant"], li[data-message-role="assistant"], [data-chatgpt-search-unit-key$=":assistant"]',
       conv: p => (p.match(/\/u?c\/([\w-]+)/) || [])[1] || null,
-      id: el => el.getAttribute("data-message-id") || el.id || null,
-      skip: "[data-message-attribution], [data-message-actions], button",
+      id: el => el.getAttribute("data-message-id")
+        || (el.getAttribute("data-chatgpt-search-message-ids") || "").split(" ")[0]
+        || el.id || null,
+      skip: "[data-message-attribution], [data-message-actions], h4[data-conversation-role], button",
     },
     "gemini.google.com": {
       provider: "gemini",
