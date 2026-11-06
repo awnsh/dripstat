@@ -506,7 +506,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
           if (!window.JSZip) throw new Error("The zip reader didn't load. Unzip the file and drop the .json inside instead.");
           const zip = await JSZip.loadAsync(f);
           const entries = Object.values(zip.files).filter(z => !z.dir && (
-            /(^|\/)conversations\.json$/i.test(z.name) ||
+            /(^|\/)conversations(-\d+)?\.json$/i.test(z.name) ||
             /(gemini|bard)[^/]*\/MyActivity\.(json|html)$/i.test(z.name)));
           if (!entries.length) results.push({ file: f.name, err: "no chat history found inside" });
           for (const z of entries) {
@@ -521,14 +521,32 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
       }
     } catch (e) { setStatus(e.message || String(e), true); return; }
 
-    const ok = results.filter(r => r.pid);
+    // Newer exports split chats across several files (ChatGPT's conversations-000.json, -001…),
+    // so combine everything for one provider in this drop instead of letting each file replace the last.
+    const ok = results.filter(r => r.pid), byP = {};
+    for (const r of ok) {
+      const b = byP[r.pid] ||= { days: {}, convs: 0, files: [] };
+      b.convs += r.data.convs;
+      if (!b.files.includes(r.file)) b.files.push(r.file);
+      for (const [d, v] of Object.entries(r.data.days)) {
+        const x = b.days[d] ||= { in: 0, out: 0, msgs: 0 };
+        x.in += v.in; x.out += v.out; x.msgs += v.msgs;
+      }
+    }
     if (ok.length && state.sample) { const m = state.method; state = blank(); state.method = m; }
-    for (const r of ok) state.imports[r.pid] = { ...r.data, importedAt: new Date().toISOString(), file: r.file };
+    const now = new Date().toISOString();
+    for (const [pid, b] of Object.entries(byP)) {
+      const file = b.files.length > 1 ? `${b.files.length} files` : b.files[0];
+      state.imports[pid] = { days: b.days, convs: b.convs, importedAt: now, file };
+    }
     save(); render();
-    const msg = results.map(r => r.pid
-      ? `${PMAP[r.pid].name}: ${fmtInt(r.data.convs)} conversations from ${r.file}`
-      : `${r.file}: ${r.err}`).join(" · ");
-    setStatus(msg || "No files read.", !ok.length);
+    const bad = results.filter(r => !r.pid);
+    const parts = Object.entries(byP).map(([pid, b]) =>
+      `${PMAP[pid].name}: ${fmtInt(b.convs)} conversations from ${b.files.length > 1 ? `${b.files.length} files` : b.files[0]}`);
+    // When chats were found, other files from the same export (user.json, ads.json…) aren't errors.
+    if (ok.length) { if (bad.length) parts.push(`skipped ${bad.length} other file${bad.length > 1 ? "s" : ""}`); }
+    else parts.push(...bad.map(r => `${r.file}: ${r.err}`));
+    setStatus(parts.join(" · ") || "No files read.", !ok.length);
   }
 
   function setStatus(t, err) { const s = document.getElementById("status"); s.textContent = t; s.className = err ? "err" : ""; }
