@@ -300,7 +300,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
     { id: "gemini", name: "Gemini", color: "var(--s-gemini)",
       steps: ["Open <a href=\"https://takeout.google.com\" target=\"_blank\" rel=\"noopener\">takeout.google.com</a> and click <b>Deselect all</b>.", "Tick <b>My Activity</b>, open <b>All activity data included</b>, and keep only <b>Gemini Apps</b>.", "Under <b>Multiple formats</b>, set Activity records to <b>JSON</b>.", "Create the export, download the .zip, and drop it here."] },
     { id: "claude", name: "Claude", color: "var(--s-claude)",
-      steps: ["Open <a href=\"https://claude.ai/settings/data-privacy-controls\" target=\"_blank\" rel=\"noopener\">claude.ai → Settings → Privacy</a>.", "Click <b>Export data</b>.", "Download the .zip from the email link and drop it here."] },
+      steps: ["Open <a href=\"https://claude.ai/settings/data-privacy-controls\" target=\"_blank\" rel=\"noopener\">claude.ai → Settings → Privacy</a>.", "Click <b>Export data</b>.", "The email gives you a .json list of download links. Drop it here to get the right link, or open it and download <b>conversations-000.zip</b> yourself.", "Drop the conversations .zip here."] },
     { id: "chatgpt", name: "ChatGPT", color: "var(--s-chatgpt)",
       steps: ["Open <a href=\"https://chatgpt.com/#settings/DataControls\" target=\"_blank\" rel=\"noopener\">chatgpt.com → Settings → Data controls</a>.", "Click <b>Export data</b> and confirm.", "Download the .zip from the email link and drop it here."] },
   ];
@@ -488,7 +488,13 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
 
   function detect(name, text) {
     if (/\.html?$/i.test(name)) return /gemini|bard/i.test(text.slice(0, 200000)) ? ["gemini", parseGeminiHTML(text)] : null;
-    let data; try { data = JSON.parse(text); } catch { return null; }
+    let data; try { data = JSON.parse(text.replace(/^﻿/, "")); } catch { return null; }
+    // Claude now emails a manifest of download links (one zip per category) instead of the data itself.
+    if (data && !Array.isArray(data) && Array.isArray(data.data_files) && data.data_files.some(x => x && x.export_url))
+      return ["manifest", data.data_files];
+    // Accept a single conversation or a { conversations: [...] } wrapper as well as a bare array.
+    if (data && !Array.isArray(data))
+      data = Array.isArray(data.conversations) ? data.conversations : ("chat_messages" in data || "mapping" in data) ? [data] : null;
     if (!Array.isArray(data) || !data.length) return null;
     const s = data.find(x => x && typeof x === "object") || {};
     if ("chat_messages" in s) return ["claude", parseClaude(data)];
@@ -505,21 +511,29 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
         if (/\.zip$/i.test(f.name)) {
           if (!window.JSZip) throw new Error("The zip reader didn't load. Unzip the file and drop the .json inside instead.");
           const zip = await JSZip.loadAsync(f);
-          const entries = Object.values(zip.files).filter(z => !z.dir && (
-            /(^|\/)conversations(-\d+)?\.json$/i.test(z.name) ||
-            /(gemini|bard)[^/]*\/MyActivity\.(json|html)$/i.test(z.name)));
-          if (!entries.length) results.push({ file: f.name, err: "no chat history found inside" });
+          // Exports keep changing file names (conversations.json, conversations-000.json, …),
+          // so try every JSON inside and keep whatever parses as chats.
+          const entries = Object.values(zip.files).filter(z => !z.dir && !/(^|\/)__MACOSX\//.test(z.name) && (
+            /\.json$/i.test(z.name) ||
+            /(gemini|bard)[^/]*\/MyActivity\.html$/i.test(z.name)));
+          let found = 0;
           for (const z of entries) {
             setStatus(`Reading ${z.name}…`);
             const r = detect(z.name, await z.async("string"));
-            results.push(r ? { file: f.name, pid: r[0], data: r[1] } : { file: f.name, err: "format not recognised" });
+            if (r && r[0] !== "manifest") { results.push({ file: f.name, pid: r[0], data: r[1] }); found++; }
           }
+          if (!found) results.push({ file: f.name, err: "no chat history found inside" });
         } else {
           const r = detect(f.name, await f.text());
-          results.push(r ? { file: f.name, pid: r[0], data: r[1] } : { file: f.name, err: "format not recognised" });
+          if (r && r[0] === "manifest") results.push({ file: f.name, manifest: r[1] });
+          else results.push(r ? { file: f.name, pid: r[0], data: r[1] } : { file: f.name, err: "format not recognised" });
         }
       }
     } catch (e) { setStatus(e.message || String(e), true); return; }
+
+    // A Claude download manifest has no chats in it: show the links that do.
+    const manifests = results.filter(r => r.manifest);
+    if (manifests.length && !results.some(r => r.pid)) { showManifest(manifests.flatMap(r => r.manifest)); return; }
 
     // Newer exports split chats across several files (ChatGPT's conversations-000.json, -001…),
     // so combine everything for one provider in this drop instead of letting each file replace the last.
@@ -540,7 +554,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
       state.imports[pid] = { days: b.days, convs: b.convs, importedAt: now, file };
     }
     save(); render();
-    const bad = results.filter(r => !r.pid);
+    const bad = results.filter(r => !r.pid && !r.manifest);
     const parts = Object.entries(byP).map(([pid, b]) =>
       `${PMAP[pid].name}: ${fmtInt(b.convs)} conversations from ${b.files.length > 1 ? `${b.files.length} files` : b.files[0]}`);
     // When chats were found, other files from the same export (user.json, ads.json…) aren't errors.
@@ -550,6 +564,16 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
   }
 
   function setStatus(t, err) { const s = document.getElementById("status"); s.textContent = t; s.className = err ? "err" : ""; }
+
+  function showManifest(files) {
+    const s = document.getElementById("status");
+    const convs = files.filter(x => x && x.category === "conversations" && /^https:\/\/claude\.ai\//.test(x.export_url || ""));
+    const links = convs.map(x => `<a href="${esc(x.export_url)}" target="_blank" rel="noopener">${esc(x.filename || "conversations zip")}</a>`).join(", ");
+    s.className = "";
+    s.innerHTML = links
+      ? `That's Claude's list of download links, not your chats. Download ${links} (while signed in to claude.ai; links expire 24 hours after the export) and drop the zip here.`
+      : `That's Claude's list of download links, not your chats. Download the <b>conversations</b> zip from it and drop that here.`;
+  }
 
   // ---------- render ----------
   const $ = id => document.getElementById(id);
